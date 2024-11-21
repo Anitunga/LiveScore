@@ -38,7 +38,7 @@ namespace LiveScore.Controllers
                 var token = _jwtService.GenerateToken(loggedInUser);
                 return Ok(new { token });
             }
-            catch (Exception ex)
+            catch
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while processing your request");
             }
