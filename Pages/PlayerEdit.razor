@@ -1,0 +1,84 @@
+﻿@page "/players/edit/{PlayerId:int}"
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+
+<h3>Edit Player</h3>
+
+<EditForm Model="ExistingPlayer" OnValidSubmit="HandleEditPlayer">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label for="name">Name:</label>
+        <InputText class="form-control" id="name" @bind-Value="ExistingPlayer.Name" />
+    </div>
+
+    <div class="form-group">
+        <label for="number">Number:</label>
+        <InputNumber class="form-control" id="number" @bind-Value="ExistingPlayer.Number" />
+    </div>
+
+    <div class="form-group">
+        <label for="position">Position:</label>
+        <InputSelect class="form-control" id="position" @bind-Value="ExistingPlayer.Position">
+            @foreach (var position in Enum.GetValues(typeof(Position)).Cast<Position>())
+            {
+                <option value="@position">@position</option>
+            }
+        </InputSelect>
+    </div>
+
+    <div class="form-group">
+        <label for="team">Team:</label>
+        <InputSelect class="form-control" id="team" @bind-Value="ExistingPlayer.TeamId">
+            <option value="">Select a team</option>
+            @foreach (var team in TeamList)
+            {
+                <option value="@team.TeamId">@team.Name</option>
+            }
+        </InputSelect>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+    <button class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+</EditForm>
+
+@code {
+    [Parameter] public int PlayerId { get; set; }
+    private Player ExistingPlayer = new Player();
+    private List<Team> TeamList = new List<Team>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+            ExistingPlayer = await client.GetFromJsonAsync<Player>($"api/player/{PlayerId}");
+            TeamList = await client.GetFromJsonAsync<List<Team>>("api/teams");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching players: {ex.Message}");
+        }
+    }
+
+    private async Task HandleEditPlayer()
+    {
+        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+        var response = await client.PutAsJsonAsync($"api/player/{PlayerId}", ExistingPlayer);
+
+        if (response.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/players");  // Redirect to the players list page
+        }
+        else
+        {
+            Console.WriteLine("Error updating player");
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/players");
+    }
+}

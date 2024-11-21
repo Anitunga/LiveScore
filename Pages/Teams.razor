@@ -4,30 +4,41 @@
 
 <h3>Teams</h3>
 
-<table>
-    <thead>
-        <tr>
-            <th>Team Name</th>
-            <th>Coach</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var team in TeamList)
-        {
+<div class="table-responsive">
+    <table class="table table-bordered table-striped">
+        <thead class="thead-dark">
             <tr>
-                <td>@team.Name</td>
-                <td>@team.Coach.Name</td>
-                <td>
-                    <button @onclick="() => EditTeam(team.TeamId)">Edit</button>
-                    <button @onclick="() => DeleteTeam(team.TeamId)">Delete</button>
-                </td>
+                <th>Team Name</th>
+                <th>Coach</th>
+                <th>Actions</th>
             </tr>
-        }
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+            @if (TeamList.Any())
+            {
+                @foreach (var team in TeamList)
+                {
+                    <tr>
+                        <td>@team.Name</td>
+                        <td>@team.Coach?.Name</td>
+                        <td>
+                            <button class="btn btn-warning" @onclick="() => EditTeam(team.TeamId)">Edit</button>
+                            <button class="btn btn-danger" @onclick="() => DeleteTeam(team.TeamId)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="3" class="text-center">No teams available</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
 
-<button @onclick="CreateNewTeam">Create New Team</button>
+<button class="btn btn-success" @onclick="CreateNewTeam">Create New Team</button>
 
 @code {
     private List<Team> TeamList = new List<Team>();
@@ -53,8 +64,7 @@
         var response = await HttpClient.DeleteAsync($"api/teams/{teamId}");
         if (response.IsSuccessStatusCode)
         {
-            var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
-            TeamList = await client.GetFromJsonAsync<List<Team>>("api/teams"); // Refresh list
+            TeamList = await HttpClient.GetFromJsonAsync<List<Team>>("api/teams"); // Refresh list
         }
     }
 }

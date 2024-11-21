@@ -1,33 +1,100 @@
-﻿@page "/live/{matchId:int}"
+﻿@page "/livematch/{MatchId:int}"
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
 
-<h3>Live Match: @MatchId</h3>
+<PageTitle>Live Match: @MatchId</PageTitle>
 
-<div>
-    <h4>Score: Team A @TeamAScore - Team B @TeamBScore</h4>
-</div>
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-header bg-primary text-white text-center">
+            <h3>Live Match: @MatchId</h3>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col text-center">
+                    <h4>@TeamAName</h4>
+                    <h2>@TeamAScore</h2>
+                    <p class="text-muted">Team A</p>
+                </div>
+                <div class="col text-center">
+                    <h4>VS</h4>
+                </div>
+                <div class="col text-center">
+                    <h4>@TeamBName</h4>
+                    <h2>@TeamBScore</h2>
+                    <p class="text-muted">Team B</p>
+                </div>
+            </div>
 
-<div>
-    <button @onclick="LogEvent">Log Event</button>
+            <div class="row mb-3">
+                <div class="col text-center">
+                    <h5>Match Date: @MatchDate.ToString("MMMM dd, yyyy hh:mm tt")</h5>
+                    <h5>Total Quarters: @TotalQuarters</h5>
+                    <h5>Quarter Duration: @QuarterDuration seconds</h5>
+                    <h5>Timeout Duration: @TimeoutDuration seconds</h5>
+                </div>
+            </div>
+
+            <div class="row justify-content-center">
+                <div class="col text-center">
+                    <button class="btn btn-danger btn-lg w-100" @onclick="EndMatch">End Match</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @code {
     [Parameter] public int MatchId { get; set; }
     private int TeamAScore { get; set; } = 0;
     private int TeamBScore { get; set; } = 0;
+    private string TeamAName { get; set; }
+    private string TeamBName { get; set; }
+    private DateTime MatchDate { get; set; }
+    private int TotalQuarters { get; set; }
+    private int QuarterDuration { get; set; }
+    private int TimeoutDuration { get; set; }
+
+    private HttpClient _client;
+
+    protected override void OnInitialized()
+    {
+        _client = HttpClientFactory.CreateClient();
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
-        var match = await client.GetFromJsonAsync<Match>($"api/matches/{MatchId}");
-        //TeamAScore = match.TeamAScore;
-        //TeamBScore = match.TeamBScore;
+        try
+        {
+            var match = await _client.GetFromJsonAsync<Match>($"api/matches/{MatchId}");
+
+            if (match != null && match.Quarters != null && match.Quarters.Any())
+            {
+                var lastQuarter = match.Quarters.Last(); // Get the last quarter
+                TeamAScore = lastQuarter.TeamAScore;
+                TeamBScore = lastQuarter.TeamBScore;
+
+                TeamAName = match.TeamA.Name;
+                TeamBName = match.TeamB.Name;
+                MatchDate = match.Date;
+                TotalQuarters = match.TotalQuarters;
+                QuarterDuration = match.QuarterDuration;
+                TimeoutDuration = match.TimeoutDuration;
+            }
+            else
+            {
+                Console.WriteLine("Match or quarters data not found");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching match: {ex.Message}");
+        }
     }
 
-    private async Task LogEvent()
+    private async Task EndMatch()
     {
-        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
-        // Log event logic goes here
+        // Handle match ending logic (e.g., update match status, display final scores)
+        Console.WriteLine("Match ended.");
     }
 }

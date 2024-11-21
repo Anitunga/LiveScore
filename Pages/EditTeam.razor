@@ -1,5 +1,5 @@
 ﻿@page "/teams/edit/{TeamId:int}"
-@inject HttpClient HttpClient
+@inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
 
 <h3>Edit Team</h3>
@@ -8,15 +8,23 @@
     <DataAnnotationsValidator />
     <ValidationSummary />
 
-    <div>
+    <div class="form-group">
         <label>Team Name:</label>
-        <InputText @bind-Value="TeamToEdit.Name" />
+        <InputText class="form-control" @bind-Value="TeamToEdit.Name" />
     </div>
-    <div>
+
+    <div class="form-group">
         <label>Coach:</label>
-        <!--<InputText @bind-Value="TeamToEdit.CoachId" />-->
+        <InputSelect class="form-control" @bind-Value="TeamToEdit.CoachId">
+            <option value="">Select a Coach</option>
+            @foreach (var coach in CoachList)
+            {
+                <option value="@coach.CoachId">@coach.Name</option>
+            }
+        </InputSelect>
     </div>
-    <button type="submit">Save Changes</button>
+
+    <button type="submit" class="btn btn-primary">Save Changes</button>
 </EditForm>
 
 @if (!string.IsNullOrEmpty(ErrorMessage))
@@ -27,26 +35,49 @@
 @code {
     [Parameter] public int TeamId { get; set; }
     private Team TeamToEdit = new Team();
+    private List<Coach> CoachList = new List<Coach>();
     private string ErrorMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
-        TeamToEdit = await client.GetFromJsonAsync<Team>($"api/teams/{TeamId}");
+        try
+        {
+            // Get HttpClient instance from IHttpClientFactory
+            var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+            TeamToEdit = await client.GetFromJsonAsync<Team>($"api/teams/{TeamId}");
+
+            // Fetch the list of coaches to populate the dropdown
+            CoachList = await client.GetFromJsonAsync<List<Coach>>("api/coaches");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching team or coaches: {ex.Message}");
+            ErrorMessage = "An error occurred while fetching the data.";
+        }
     }
 
     private async Task HandleEditTeam()
     {
-        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
-        var response = await client.PutAsJsonAsync($"api/teams/{TeamId}", TeamToEdit);
+        try
+        {
+            var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+            var response = await client.PutAsJsonAsync($"api/teams/{TeamId}", TeamToEdit);
 
-        if (response.IsSuccessStatusCode)
-        {
-            NavigationManager.NavigateTo("/teams");
+            if (response.IsSuccessStatusCode)
+            {
+                // Redirect to the teams list after successful edit
+                NavigationManager.NavigateTo("/teams");
+            }
+            else
+            {
+                // Handle unsuccessful response with more specific error message
+                ErrorMessage = "Failed to update team.";
+            }
         }
-        else
+        catch (Exception ex)
         {
-            ErrorMessage = "Failed to update team.";
+            // Handle any exception during the PUT request
+            ErrorMessage = $"An error occurred: {ex.Message}";
         }
     }
 }

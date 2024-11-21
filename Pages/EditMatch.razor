@@ -1,0 +1,85 @@
+﻿@page "/matches/edit/{MatchId:int}"
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+
+<h3>Edit Match: @MatchId</h3>
+
+<EditForm Model="MatchToEdit" OnValidSubmit="HandleEditMatch">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Team A:</label>
+        <InputSelect @bind-Value="MatchToEdit.TeamAId">
+            <option value="">Select Team A</option>
+            @foreach (var team in Teams)
+            {
+                <option value="@team.TeamId">@team.Name</option>
+            }
+        </InputSelect>
+    </div>
+    <div>
+        <label>Team B:</label>
+        <InputSelect @bind-Value="MatchToEdit.TeamBId">
+            <option value="">Select Team B</option>
+            @foreach (var team in Teams)
+            {
+                <option value="@team.TeamId">@team.Name</option>
+            }
+        </InputSelect>
+    </div>
+    <div>
+        <label>Total Quarters:</label>
+        <InputNumber @bind-Value="MatchToEdit.TotalQuarters" />
+    </div>
+    <div>
+        <label>Quarter Duration:</label>
+        <InputNumber @bind-Value="MatchToEdit.QuarterDuration" />
+    </div>
+    <div>
+        <label>Timeout Duration:</label>
+        <InputNumber @bind-Value="MatchToEdit.TimeoutDuration" />
+    </div>
+
+    <button type="submit">Save Changes</button>
+</EditForm>
+
+@code {
+    [Parameter] public int MatchId { get; set; }
+    private Match MatchToEdit = new Match();
+    private List<Team> Teams = new List<Team>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+        // Fetch teams to populate dropdowns
+        Teams = await client.GetFromJsonAsync<List<Team>>("api/teams");
+
+        // Fetch match details by MatchId
+        var match = await client.GetFromJsonAsync<Match>($"api/match/{MatchId}");
+
+        if (match != null)
+        {
+            MatchToEdit = match;
+        }
+        else
+        {
+            Console.WriteLine("Error: Match not found");
+        }
+    }
+
+    private async Task HandleEditMatch()
+    {
+        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+        var response = await client.PutAsJsonAsync($"api/match/{MatchId}", MatchToEdit);
+
+        if (response.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/matches");  // Redirect to the matches list page after successful edit
+        }
+        else
+        {
+            Console.WriteLine("Error updating match");
+        }
+    }
+}

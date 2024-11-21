@@ -1,0 +1,81 @@
+﻿@page "/users/edit/{UserId:int}"
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+
+<h3>Edit User</h3>
+
+<EditForm Model="UserToEdit" OnValidSubmit="HandleEditUser">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label for="username">Username:</label>
+        <InputText class="form-control" id="username" @bind-Value="UserToEdit.Username" />
+    </div>
+
+    <div class="form-group">
+        <label for="role">Role:</label>
+        <InputText class="form-control" id="role" @bind-Value="UserToEdit.Role" />
+    </div>
+
+    <div>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <button class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+    </div>
+</EditForm>
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <p class="text-danger">@ErrorMessage</p>
+}
+
+@code {
+    [Parameter] public int UserId { get; set; }
+    private User UserToEdit = new User();
+    private string ErrorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+            UserToEdit = await client.GetFromJsonAsync<User>($"api/users/{UserId}");
+
+            if (UserToEdit == null)
+            {
+                ErrorMessage = "User not found.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error fetching user: {ex.Message}";
+        }
+    }
+
+    private async Task HandleEditUser()
+    {
+        try
+        {
+            var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+            var response = await client.PutAsJsonAsync($"api/users/{UserId}", UserToEdit);
+
+            if (response.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo("/users");  // Redirect to the users list page
+            }
+            else
+            {
+                ErrorMessage = "Error updating user.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error updating user: {ex.Message}";
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/users");
+    }
+}

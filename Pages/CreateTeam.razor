@@ -1,5 +1,5 @@
 ﻿@page "/teams/create"
-@inject HttpClient HttpClient
+@inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
 
 <h3>Create New Team</h3>
@@ -8,15 +8,17 @@
     <DataAnnotationsValidator />
     <ValidationSummary />
 
-    <div>
-        <label>Team Name:</label>
-        <InputText @bind-Value="NewTeam.Name" />
+    <div class="form-group">
+        <label for="teamName">Team Name:</label>
+        <InputText class="form-control" id="teamName" @bind-Value="NewTeam.Name" />
     </div>
-    <div>
-        <label>Coach:</label>
-        <!--<InputText @bind-Value="NewTeam.CoachId" />-->
+
+    <div class="form-group">
+        <label for="coach">Coach:</label>
+        <!--<InputText class="form-control" id="coach" @bind-Value="NewTeam.CoachId" />-->
     </div>
-    <button type="submit">Create Team</button>
+
+    <button type="submit" class="btn btn-success">Create Team</button>
 </EditForm>
 
 @if (!string.IsNullOrEmpty(ErrorMessage))

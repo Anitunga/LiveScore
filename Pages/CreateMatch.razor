@@ -8,23 +8,62 @@
     <DataAnnotationsValidator />
     <ValidationSummary />
 
-    <div>
-        <label>Team A:</label>
-        <!--<InputText @bind-Value="NewMatch.TeamA" />-->
+    <div class="form-group">
+        <label for="teamA">Team A:</label>
+        <InputSelect class="form-control" id="teamA" @bind-Value="NewMatch.TeamAId">
+            <option value="">Select a team</option>
+            @foreach (var team in Teams)
+            {
+                <option value="@team.TeamId">@team.Name</option>
+            }
+        </InputSelect>
     </div>
-    <div>
-        <label>Team B:</label>
-        <!--<InputText @bind-Value="NewMatch.TeamB" />-->
+
+    <div class="form-group">
+        <label for="teamB">Team B:</label>
+        <InputSelect class="form-control" id="teamB" @bind-Value="NewMatch.TeamBId">
+            <option value="">Select a team</option>
+            @foreach (var team in Teams)
+            {
+                <option value="@team.TeamId">@team.Name</option>
+            }
+        </InputSelect>
     </div>
-    <div>
-        <label>Total Quarters:</label>
-        <InputNumber @bind-Value="NewMatch.TotalQuarters" />
+
+    <div class="form-group">
+        <label for="totalQuarters">Total Quarters:</label>
+        <InputNumber class="form-control" id="totalQuarters" @bind-Value="NewMatch.TotalQuarters" />
     </div>
-    <button type="submit">Create Match</button>
+
+    <div class="form-group">
+        <label for="quarterDuration">Quarter Duration:</label>
+        <InputNumber class="form-control" id="quarterDuration" @bind-Value="NewMatch.QuarterDuration" />
+    </div>
+
+    <div class="form-group">
+        <label for="timeoutDuration">Timeout Duration:</label>
+        <InputNumber class="form-control" id="timeoutDuration" @bind-Value="NewMatch.TimeoutDuration" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create Match</button>
 </EditForm>
 
 @code {
     private Match NewMatch = new Match();
+    private List<Team> Teams = new List<Team>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+            Teams = await client.GetFromJsonAsync<List<Team>>("api/teams");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching teams: {ex.Message}");
+        }
+    }
 
     private async Task HandleCreateMatch()
     {
@@ -34,6 +73,10 @@
         if (response.IsSuccessStatusCode)
         {
             NavigationManager.NavigateTo("/matches");
+        }
+        else
+        {
+            Console.WriteLine("Error creating match");
         }
     }
 }

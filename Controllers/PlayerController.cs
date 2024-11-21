@@ -25,7 +25,7 @@ namespace LiveScore.Controllers
                 .Include(p => p.Team)
                 .ToListAsync();
 
-            return new JsonResult(players);
+            return players;
         }
 
         // GET: api/Player/{id}

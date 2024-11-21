@@ -1,0 +1,93 @@
+﻿@page "/players"
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<h3>Player List</h3>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Number</th>
+            <th>Position</th>
+            <th>Team</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Players != null && Players.Any())
+        {
+            @foreach (var player in Players)
+            {
+                <tr>
+                    <td>@player.Name</td>
+                    <td>@player.Number</td>
+                    <td>@player.Position</td>
+                    <td>@player.Team?.Name</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="() => EditPlayer(player.PlayerId)">Edit</button>
+                        <button class="btn btn-danger" @onclick="() => DeletePlayer(player.PlayerId)">Delete</button>
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="5">No players available.</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<button class="btn btn-success" @onclick="CreatePlayer">Add New Player</button>
+
+@code {
+    private List<Player> Players = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+            Players = await client.GetFromJsonAsync<List<Player>>("api/player");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching players: {ex.Message}");
+        }
+    }
+
+    private void CreatePlayer()
+    {
+        NavigationManager.NavigateTo("/players/create");
+    }
+
+    private void EditPlayer(int playerId)
+    {
+        NavigationManager.NavigateTo($"/players/edit/{playerId}");
+    }
+
+    private async Task DeletePlayer(int playerId)
+    {
+        // Show confirmation dialog before deleting
+        bool isConfirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete player ID {playerId}?");
+
+        if (isConfirmed)
+        {
+            try
+            {
+                // Call the API to delete the player
+                await HttpClient.DeleteAsync($"api/player/{playerId}");
+                // Refresh the player list after deletion
+                Players = await HttpClient.GetFromJsonAsync<List<Player>>("api/player");
+            }
+            catch (Exception ex)
+            {
+                // Handle the error (e.g., display a message)
+                Console.WriteLine($"Error deleting player: {ex.Message}");
+            }
+        }
+    }
+}

@@ -1,0 +1,81 @@
+﻿@page "/players/create"
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+
+<h3>Create New Player</h3>
+
+<EditForm Model="NewPlayer" OnValidSubmit="HandleCreatePlayer">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label for="name">Name:</label>
+        <InputText class="form-control" id="name" @bind-Value="NewPlayer.Name" />
+    </div>
+
+    <div class="form-group">
+        <label for="number">Number:</label>
+        <InputNumber class="form-control" id="number" @bind-Value="NewPlayer.Number" />
+    </div>
+
+    <div class="form-group">
+        <label for="position">Position:</label>
+        <InputSelect class="form-control" id="position" @bind-Value="NewPlayer.Position">
+            @foreach (var position in Enum.GetValues(typeof(Position)).Cast<Position>())
+            {
+                <option value="@position">@position</option>
+            }
+        </InputSelect>
+    </div>
+
+    <div class="form-group">
+        <label for="team">Team:</label>
+        <InputSelect class="form-control" id="team" @bind-Value="NewPlayer.TeamId">
+            <option value="">Select a team</option>
+            @foreach (var team in TeamList)
+            {
+                <option value="@team.TeamId">@team.Name</option>
+            }
+        </InputSelect>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+    <button class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+</EditForm>
+
+@code {
+    private Player NewPlayer = new Player();
+    private List<Team> TeamList = new List<Team>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+            TeamList = await client.GetFromJsonAsync<List<Team>>("api/teams");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching teams: {ex.Message}");
+        }
+    }
+
+    private async Task HandleCreatePlayer()
+    {
+        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+        var response = await client.PostAsJsonAsync("api/player", NewPlayer);
+        if (response.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/players");
+        }
+        else
+        {
+            Console.WriteLine("Error creating player");
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/players");
+    }
+}

@@ -1,13 +1,13 @@
 ﻿@page "/matches"
-@inject HttpClient HttpClient
+@inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
 
 <h3>Matches</h3>
 
-<table>
+<table class="table table-striped">
     <thead>
         <tr>
-            <th>Match</th>
+            <th>Match ID</th>
             <th>Team A</th>
             <th>Team B</th>
             <th>Actions</th>
@@ -23,8 +23,8 @@
                     <td>@match.TeamA?.Name</td>
                     <td>@match.TeamB?.Name</td>
                     <td>
-                        <button @onclick="() => EditMatch(match.MatchId)">Edit</button>
-                        <button @onclick="() => DeleteMatch(match.MatchId)">Delete</button>
+                        <button class="btn btn-primary" @onclick="() => EditMatch(match.MatchId)">Edit</button>
+                        <button class="btn btn-danger" @onclick="() => DeleteMatch(match.MatchId)">Delete</button>
                     </td>
                 </tr>
             }
@@ -38,16 +38,17 @@
     </tbody>
 </table>
 
-<button @onclick="CreateNewMatch">Create New Match</button>
+<button class="btn btn-success" @onclick="CreateNewMatch">Create New Match</button>
 
 @code {
     private List<Match> MatchList = new List<Match>();
 
     protected override async Task OnInitializedAsync()
     {
+        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
         try
         {
-            MatchList = await HttpClient.GetFromJsonAsync<List<Match>>("api/Match");
+            MatchList = await client.GetFromJsonAsync<List<Match>>("api/match");
         }
         catch (Exception ex)
         {
@@ -69,10 +70,11 @@
     {
         try
         {
-            var response = await HttpClient.DeleteAsync($"api/match/{matchId}");
+            var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+            var response = await client.DeleteAsync($"api/match/{matchId}");
             if (response.IsSuccessStatusCode)
             {
-                MatchList = await HttpClient.GetFromJsonAsync<List<Match>>("api/match"); // Refresh the list
+                MatchList = await client.GetFromJsonAsync<List<Match>>("api/match"); // Refresh list
             }
             else
             {

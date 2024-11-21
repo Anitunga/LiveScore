@@ -1,0 +1,76 @@
+﻿@page "/users/create"
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+
+<h3>Create User</h3>
+
+<EditForm Model="NewUser" OnValidSubmit="HandleCreateUser">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label for="username">Username:</label>
+        <InputText class="form-control" id="username" @bind-Value="NewUser.Username" />
+    </div>
+
+    <div class="form-group">
+        <label for="role">Role:</label>
+        <InputSelect class="form-control" id="role" @bind-Value="NewUser.Role">
+            <option value="">Select a role</option>
+            <option value="Admin">Admin</option>
+            <option value="Encoder">Encoder</option>
+            <option value="Viewer">Viewer</option>
+        </InputSelect>
+    </div>
+
+    <div class="form-group">
+        <label for="password">Password:</label>
+        <InputText class="form-control" id="password" type="password" @bind-Value="NewUser.Password" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create User</button>
+    <button class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+</EditForm>
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <p class="text-danger">@ErrorMessage</p>
+}
+
+@code {
+    private User NewUser = new User();
+    private string ErrorMessage = string.Empty;
+
+    private async Task HandleCreateUser()
+    {
+        try
+        {
+            var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+            var response = await client.PostAsJsonAsync("api/users/register", NewUser);
+
+            if (response.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo("/users");  // Redirect to the users list page
+            }
+            else
+            {
+                var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+                ErrorMessage = error?.Message ?? "Failed to create user.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error creating user: {ex.Message}";
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/users");
+    }
+
+    public class ErrorResponse
+    {
+        public string Message { get; set; }
+    }
+}
