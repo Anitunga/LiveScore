@@ -1,100 +1,62 @@
-﻿@page "/livematch/{MatchId:int}"
+﻿@page "/livematch"
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
 
-<PageTitle>Live Match: @MatchId</PageTitle>
+<PageTitle>Live Matches</PageTitle>
 
 <div class="container mt-5">
-    <div class="card">
-        <div class="card-header bg-primary text-white text-center">
-            <h3>Live Match: @MatchId</h3>
-        </div>
-        <div class="card-body">
-            <div class="row mb-3">
-                <div class="col text-center">
-                    <h4>@TeamAName</h4>
-                    <h2>@TeamAScore</h2>
-                    <p class="text-muted">Team A</p>
-                </div>
-                <div class="col text-center">
-                    <h4>VS</h4>
-                </div>
-                <div class="col text-center">
-                    <h4>@TeamBName</h4>
-                    <h2>@TeamBScore</h2>
-                    <p class="text-muted">Team B</p>
-                </div>
-            </div>
+    <h3 class="text-center mb-4 text-primary">Live Matches</h3>
 
-            <div class="row mb-3">
-                <div class="col text-center">
-                    <h5>Match Date: @MatchDate.ToString("MMMM dd, yyyy hh:mm tt")</h5>
-                    <h5>Total Quarters: @TotalQuarters</h5>
-                    <h5>Quarter Duration: @QuarterDuration seconds</h5>
-                    <h5>Timeout Duration: @TimeoutDuration seconds</h5>
+    @if (MatchList.Any())
+    {
+        <div class="row">
+            @foreach (var match in MatchList)
+            {
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-dark text-white text-center">
+                            <h5>Match</h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <h4 class="text-success">@match.TeamA?.Name</h4>
+                            <h5 class="text-muted">VS</h5>
+                            <h4 class="text-danger">@match.TeamB?.Name</h4>
+                        </div>
+                        <div class="card-footer text-center">
+                            <button class="btn btn-primary btn-sm" @onclick="() => ViewMatch(match.MatchId)">View Match</button>
+                        </div>
+                    </div>
                 </div>
-            </div>
-
-            <div class="row justify-content-center">
-                <div class="col text-center">
-                    <button class="btn btn-danger btn-lg w-100" @onclick="EndMatch">End Match</button>
-                </div>
-            </div>
+            }
         </div>
-    </div>
+    }
+    else
+    {
+        <div class="alert alert-warning text-center">
+            <strong>No matches available!</strong> Check back later.
+        </div>
+    }
 </div>
 
 @code {
-    [Parameter] public int MatchId { get; set; }
-    private int TeamAScore { get; set; } = 0;
-    private int TeamBScore { get; set; } = 0;
-    private string TeamAName { get; set; }
-    private string TeamBName { get; set; }
-    private DateTime MatchDate { get; set; }
-    private int TotalQuarters { get; set; }
-    private int QuarterDuration { get; set; }
-    private int TimeoutDuration { get; set; }
-
-    private HttpClient _client;
-
-    protected override void OnInitialized()
-    {
-        _client = HttpClientFactory.CreateClient();
-    }
+    private List<Match> MatchList = new List<Match>();
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            var match = await _client.GetFromJsonAsync<Match>($"api/matches/{MatchId}");
-
-            if (match != null && match.Quarters != null && match.Quarters.Any())
-            {
-                var lastQuarter = match.Quarters.Last(); // Get the last quarter
-                TeamAScore = lastQuarter.TeamAScore;
-                TeamBScore = lastQuarter.TeamBScore;
-
-                TeamAName = match.TeamA.Name;
-                TeamBName = match.TeamB.Name;
-                MatchDate = match.Date;
-                TotalQuarters = match.TotalQuarters;
-                QuarterDuration = match.QuarterDuration;
-                TimeoutDuration = match.TimeoutDuration;
-            }
-            else
-            {
-                Console.WriteLine("Match or quarters data not found");
-            }
+            var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+            MatchList = await client.GetFromJsonAsync<List<Match>>("api/match");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error fetching match: {ex.Message}");
+            Console.WriteLine($"Error fetching matches: {ex.Message}");
         }
     }
 
-    private async Task EndMatch()
+    private void ViewMatch(int matchId)
     {
-        // Handle match ending logic (e.g., update match status, display final scores)
-        Console.WriteLine("Match ended.");
+        // Redirect to match details page (optional)
+        NavigationManager.NavigateTo($"/matches");
     }
 }
