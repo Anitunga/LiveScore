@@ -1,0 +1,38 @@
+﻿@page "/"
+
+<PageTitle>LiveScore - Basketball</PageTitle>
+
+<div class="container">
+    <h1>Live Basketball Scores</h1>
+    
+    <div class="row mt-4">
+        <div class="col-md-8">
+            <h3>Today's Matches</h3>
+            @if (todayMatches == null)
+            {
+                <p>Loading...</p>
+            }
+            else if (!todayMatches.Any())
+            {
+                <p>No matches scheduled for today.</p>
+            }
+            else
+            {
+                @foreach (var match in todayMatches)
+                {
+                    <MatchCard Match="@match" />
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Match> todayMatches;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get today's matches
+        todayMatches = await MatchService.GetTodayMatchesAsync();
+    }
+}

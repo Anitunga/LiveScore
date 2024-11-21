@@ -1,0 +1,170 @@
+@page "/match/{MatchId:int}"
+@attribute [Authorize(Roles = "Admin,Encoder")]
+@inject IMatchService MatchService
+@inject IQuarterService QuarterService
+@inject IEventService EventService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Live Match Scoring</PageTitle>
+
+<div class="match-container">
+    <div class="score-board">
+        <div class="team team-a">
+            <h2>@match?.TeamA?.Name</h2>
+            <div class="score">@GetTotalScore(true)</div>
+        </div>
+        
+        <div class="match-info">
+            <div class="quarter">Quarter @(currentQuarter?.Number ?? 0)</div>
+            <div class="timer">@timeDisplay</div>
+        </div>
+        
+        <div class="team team-b">
+            <h2>@match?.TeamB?.Name</h2>
+            <div class="score">@GetTotalScore(false)</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <AuthorizeView Roles="Admin,Encoder">
+            <Authorized>
+                @if (!isQuarterActive)
+                {
+                    <button class="btn btn-primary" @onclick="StartQuarter">Start Quarter</button>
+                }
+                else
+                {
+                    <button class="btn btn-danger" @onclick="EndQuarter">End Quarter</button>
+                }
+                <button class="btn btn-warning" @onclick="CallTimeout" disabled="@(!isQuarterActive)">
+                    Timeout (@timeoutCount)
+                </button>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <div class="scoring-controls row">
+        <div class="team-a-controls col-md-6">
+            <h3>@match?.TeamA?.Name Players</h3>
+            @if (match?.TeamA != null)
+            {
+                foreach (var player in match.TeamA.Players.Where(p => p.IsStartingPlayer))
+                {
+                    <PlayerScoring 
+                        Player="player" 
+                        OnScore="RecordScore" 
+                        OnFoul="RecordFoul"
+                        IsActive="@isQuarterActive" />
+                }
+                <button class="btn btn-secondary" @onclick="() => ShowSubstitutionDialog(true)">
+                    Substitution
+                </button>
+            }
+        </div>
+
+        <div class="team-b-controls col-md-6">
+            <h3>@match?.TeamB?.Name Players</h3>
+            @if (match?.TeamB != null)
+            {
+                foreach (var player in match.TeamB.Players.Where(p => p.IsStartingPlayer))
+                {
+                    <PlayerScoring 
+                        Player="player" 
+                        OnScore="RecordScore" 
+                        OnFoul="RecordFoul"
+                        IsActive="@isQuarterActive" />
+                }
+                <button class="btn btn-secondary" @onclick="() => ShowSubstitutionDialog(false)">
+                    Substitution
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int MatchId { get; set; }
+
+    private Match match;
+    private Quarter currentQuarter;
+    private string timeDisplay = "00:00";
+    private Timer timer;
+    private bool isQuarterActive;
+    private int timeoutCount;
+    private DateTime quarterStartTime;
+    private TimeSpan elapsedTime;
+    private const int QUARTER_DURATION = 600; // 10 minutes in seconds
+    private const int TIMEOUT_DURATION = 60; // 1 minute in seconds
+    private bool isInTimeout;
+
+    protected override async Task OnInitializedAsync()
+    {
+        match = await MatchService.GetMatchWithDetailsAsync(MatchId);
+        currentQuarter = match.Quarters.LastOrDefault();
+        timeoutCount = 0;
+        await InitializeTimer();
+    }
+
+    private async Task InitializeTimer()
+    {
+        timer = new Timer(async _ =>
+        {
+            if (isQuarterActive && !isInTimeout)
+            {
+                elapsedTime = DateTime.Now - quarterStartTime;
+                var remainingTime = TimeSpan.FromSeconds(QUARTER_DURATION) - elapsedTime;
+                
+                if (remainingTime <= TimeSpan.Zero)
+                {
+                    // Handle end of quarter
+                }
+            }
+        }, null, 0, 1000);
+    }
+
+    private async Task StartQuarter()
+    {
+        isQuarterActive = true;
+        quarterStartTime = DateTime.Now;
+        elapsedTime = TimeSpan.Zero;
+    }
+
+    private async Task EndQuarter()
+    {
+        isQuarterActive = false;
+    }
+
+    private async Task CallTimeout()
+    {
+        isInTimeout = true;
+        timeoutCount++;
+        await JSRuntime.InvokeVoidAsync("setTimeout", TIMEOUT_DURATION, "EndTimeout()");
+    }
+
+    private async Task EndTimeout()
+    {
+        isInTimeout = false;
+    }
+
+    private async Task RecordScore(Player player, int points)
+    {
+        // Implementation for recording scores
+    }
+
+    private async Task RecordFoul(Player player)
+    {
+        // Implementation for recording fouls
+    }
+
+    private int GetTotalScore(bool isTeamA)
+    {
+        // Implementation for getting total score
+    }
+
+    private async Task ShowSubstitutionDialog(bool isTeamA)
+    {
+        // Implementation for showing substitution dialog
+    }
+} 

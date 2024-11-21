@@ -1,0 +1,46 @@
+@inject IFoulService FoulService
+
+<div class="player-scoring-card">
+    <div class="player-info">
+        <span class="number">@Player.Number</span>
+        <span class="name">@Player.Name</span>
+        <span class="fouls">Fouls: @foulsCount</span>
+    </div>
+    <div class="scoring-buttons">
+        <button class="btn btn-success" @onclick="() => OnScore.InvokeAsync((Player, 3))" disabled="@(!IsActive || foulsCount >= 5)">
+            3 pts
+        </button>
+        <button class="btn btn-success" @onclick="() => OnScore.InvokeAsync((Player, 2))" disabled="@(!IsActive || foulsCount >= 5)">
+            2 pts
+        </button>
+        <button class="btn btn-success" @onclick="() => OnScore.InvokeAsync((Player, 1))" disabled="@(!IsActive || foulsCount >= 5)">
+            1 pt
+        </button>
+        <button class="btn btn-danger" @onclick="AddFoul" disabled="@(!IsActive || foulsCount >= 5)">
+            Foul
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Player Player { get; set; }
+    [Parameter] public EventCallback<(Player player, int points)> OnScore { get; set; }
+    [Parameter] public EventCallback<(Player player, FoulType foulType)> OnFoul { get; set; }
+    [Parameter] public bool IsActive { get; set; }
+
+    private int foulsCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        foulsCount = await FoulService.GetPlayerFoulCountAsync(Player.PlayerId);
+    }
+
+    private async Task AddFoul()
+    {
+        if (foulsCount < 5)
+        {
+            await OnFoul.InvokeAsync((Player, FoulType.Personal));
+            foulsCount++;
+        }
+    }
+} 
