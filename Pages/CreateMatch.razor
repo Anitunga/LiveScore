@@ -1,0 +1,39 @@
+﻿@page "/matches/create"
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+
+<h3>Create Match</h3>
+
+<EditForm Model="NewMatch" OnValidSubmit="HandleCreateMatch">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Team A:</label>
+        <!--<InputText @bind-Value="NewMatch.TeamA" />-->
+    </div>
+    <div>
+        <label>Team B:</label>
+        <!--<InputText @bind-Value="NewMatch.TeamB" />-->
+    </div>
+    <div>
+        <label>Total Quarters:</label>
+        <InputNumber @bind-Value="NewMatch.TotalQuarters" />
+    </div>
+    <button type="submit">Create Match</button>
+</EditForm>
+
+@code {
+    private Match NewMatch = new Match();
+
+    private async Task HandleCreateMatch()
+    {
+        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+        var response = await client.PostAsJsonAsync("api/matches", NewMatch);
+
+        if (response.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/matches");
+        }
+    }
+}

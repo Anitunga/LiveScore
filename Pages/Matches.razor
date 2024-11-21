@@ -1,0 +1,87 @@
+﻿@page "/matches"
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+
+<h3>Matches</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Match</th>
+            <th>Team A</th>
+            <th>Team B</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (MatchList.Any())
+        {
+            @foreach (var match in MatchList)
+            {
+                <tr>
+                    <td>@match.MatchId</td>
+                    <td>@match.TeamA?.Name</td>
+                    <td>@match.TeamB?.Name</td>
+                    <td>
+                        <button @onclick="() => EditMatch(match.MatchId)">Edit</button>
+                        <button @onclick="() => DeleteMatch(match.MatchId)">Delete</button>
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="4">No matches available</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<button @onclick="CreateNewMatch">Create New Match</button>
+
+@code {
+    private List<Match> MatchList = new List<Match>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            MatchList = await HttpClient.GetFromJsonAsync<List<Match>>("api/Match");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching matches: {ex.Message}");
+        }
+    }
+
+    private void CreateNewMatch()
+    {
+        NavigationManager.NavigateTo("/matches/create");
+    }
+
+    private void EditMatch(int matchId)
+    {
+        NavigationManager.NavigateTo($"/matches/edit/{matchId}");
+    }
+
+    private async Task DeleteMatch(int matchId)
+    {
+        try
+        {
+            var response = await HttpClient.DeleteAsync($"api/match/{matchId}");
+            if (response.IsSuccessStatusCode)
+            {
+                MatchList = await HttpClient.GetFromJsonAsync<List<Match>>("api/match"); // Refresh the list
+            }
+            else
+            {
+                Console.WriteLine($"Error deleting match: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting match: {ex.Message}");
+        }
+    }
+}

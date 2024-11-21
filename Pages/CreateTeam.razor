@@ -1,0 +1,45 @@
+﻿@page "/teams/create"
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+
+<h3>Create New Team</h3>
+
+<EditForm Model="NewTeam" OnValidSubmit="HandleCreateTeam">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Team Name:</label>
+        <InputText @bind-Value="NewTeam.Name" />
+    </div>
+    <div>
+        <label>Coach:</label>
+        <!--<InputText @bind-Value="NewTeam.CoachId" />-->
+    </div>
+    <button type="submit">Create Team</button>
+</EditForm>
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <p style="color: red">@ErrorMessage</p>
+}
+
+@code {
+    private Team NewTeam = new Team();
+    private string ErrorMessage = string.Empty;
+
+    private async Task HandleCreateTeam()
+    {
+        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+        var response = await client.PostAsJsonAsync("api/teams", NewTeam);
+
+        if (response.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/teams");
+        }
+        else
+        {
+            ErrorMessage = "Failed to create team.";
+        }
+    }
+}

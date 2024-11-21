@@ -1,7 +1,5 @@
 using LiveScore.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -14,6 +12,12 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSingleton<WeatherForecastService>();
 builder.Services.AddControllers();
+
+// Add services to the container
+builder.Services.AddHttpClient(); // This registers IHttpClientFactory
+builder.Services.AddRazorPages();
+builder.Services.AddServerSideBlazor();
+
 // Add services to the container.
 builder.Services.AddDbContext<LiveScoreContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -41,6 +45,7 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1"
     });
 });
+
 
 builder.Services.AddSignalR();
 

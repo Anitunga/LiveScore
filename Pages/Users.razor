@@ -1,0 +1,50 @@
+﻿@page "/users"
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+
+<h3>Users</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var user in UsersList)
+        {
+            <tr>
+                <td>@user.Username</td>
+                <td>@user.Role</td>
+                <td>
+                    <button @onclick="() => EditUser(user.UserId)">Edit</button>
+                    <button @onclick="() => DeleteUser(user.UserId)">Delete</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<User> UsersList = new List<User>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var client = new HttpClient{BaseAddress = new Uri("https://localhost:7113/")};
+        UsersList = await client.GetFromJsonAsync<List<User>>("api/users");
+    }
+
+    private void EditUser(int userId)
+    {
+        NavigationManager.NavigateTo($"/users/edit/{userId}");
+    }
+
+    private async Task DeleteUser(int userId)
+    {
+        var client = new HttpClient{BaseAddress = new Uri("https://localhost:7113/")};
+        await client.DeleteAsync($"api/users/{userId}");
+        UsersList = await client.GetFromJsonAsync<List<User>>("api/users"); // Refresh list
+    }
+}

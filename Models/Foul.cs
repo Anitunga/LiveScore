@@ -1,6 +1,4 @@
-﻿using static LiveScore.Models.Enums;
-
-namespace LiveScore.Models
+﻿namespace LiveScore.Models
 {
     public class Foul
     {

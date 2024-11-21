@@ -1,0 +1,52 @@
+﻿@page "/teams/edit/{TeamId:int}"
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+
+<h3>Edit Team</h3>
+
+<EditForm Model="TeamToEdit" OnValidSubmit="HandleEditTeam">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Team Name:</label>
+        <InputText @bind-Value="TeamToEdit.Name" />
+    </div>
+    <div>
+        <label>Coach:</label>
+        <!--<InputText @bind-Value="TeamToEdit.CoachId" />-->
+    </div>
+    <button type="submit">Save Changes</button>
+</EditForm>
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <p style="color: red">@ErrorMessage</p>
+}
+
+@code {
+    [Parameter] public int TeamId { get; set; }
+    private Team TeamToEdit = new Team();
+    private string ErrorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+        TeamToEdit = await client.GetFromJsonAsync<Team>($"api/teams/{TeamId}");
+    }
+
+    private async Task HandleEditTeam()
+    {
+        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+        var response = await client.PutAsJsonAsync($"api/teams/{TeamId}", TeamToEdit);
+
+        if (response.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/teams");
+        }
+        else
+        {
+            ErrorMessage = "Failed to update team.";
+        }
+    }
+}

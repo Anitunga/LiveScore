@@ -1,0 +1,33 @@
+﻿@page "/live/{matchId:int}"
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+
+<h3>Live Match: @MatchId</h3>
+
+<div>
+    <h4>Score: Team A @TeamAScore - Team B @TeamBScore</h4>
+</div>
+
+<div>
+    <button @onclick="LogEvent">Log Event</button>
+</div>
+
+@code {
+    [Parameter] public int MatchId { get; set; }
+    private int TeamAScore { get; set; } = 0;
+    private int TeamBScore { get; set; } = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+        var match = await client.GetFromJsonAsync<Match>($"api/matches/{MatchId}");
+        //TeamAScore = match.TeamAScore;
+        //TeamBScore = match.TeamBScore;
+    }
+
+    private async Task LogEvent()
+    {
+        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+        // Log event logic goes here
+    }
+}

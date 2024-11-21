@@ -1,0 +1,46 @@
+﻿@page "/login"
+@inject NavigationManager NavigationManager
+@inject IHttpClientFactory HttpClientFactory
+
+<h3>Login</h3>
+
+<EditForm Model="User" OnValidSubmit="HandleLogin">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Username:</label>
+        <InputText @bind-Value="User.Username" />
+    </div>
+    <div>
+        <label>Password:</label>
+        <InputText @bind-Value="User.Password" InputType="password" />
+    </div>
+    <button type="submit">Login</button>
+</EditForm>
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <p style="color: red">@ErrorMessage</p>
+}
+
+@code {
+    private User User = new User();  // Use the existing User model
+    private string ErrorMessage = string.Empty;
+
+    private async Task HandleLogin()
+    {
+        // Assuming API call for login
+        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+        var response = await client.PostAsJsonAsync("api/auth/login", User);
+
+        if (response.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/matches");  // Redirect to matches page on success
+        }
+        else
+        {
+            ErrorMessage = "Invalid username or password.";
+        }
+    }
+}

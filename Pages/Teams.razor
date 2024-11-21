@@ -1,0 +1,60 @@
+﻿@page "/teams"
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+
+<h3>Teams</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Team Name</th>
+            <th>Coach</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var team in TeamList)
+        {
+            <tr>
+                <td>@team.Name</td>
+                <td>@team.Coach.Name</td>
+                <td>
+                    <button @onclick="() => EditTeam(team.TeamId)">Edit</button>
+                    <button @onclick="() => DeleteTeam(team.TeamId)">Delete</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<button @onclick="CreateNewTeam">Create New Team</button>
+
+@code {
+    private List<Team> TeamList = new List<Team>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+        TeamList = await client.GetFromJsonAsync<List<Team>>("api/teams");
+    }
+
+    private void CreateNewTeam()
+    {
+        NavigationManager.NavigateTo("/teams/create");
+    }
+
+    private void EditTeam(int teamId)
+    {
+        NavigationManager.NavigateTo($"/teams/edit/{teamId}");
+    }
+
+    private async Task DeleteTeam(int teamId)
+    {
+        var response = await HttpClient.DeleteAsync($"api/teams/{teamId}");
+        if (response.IsSuccessStatusCode)
+        {
+            var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+            TeamList = await client.GetFromJsonAsync<List<Team>>("api/teams"); // Refresh list
+        }
+    }
+}

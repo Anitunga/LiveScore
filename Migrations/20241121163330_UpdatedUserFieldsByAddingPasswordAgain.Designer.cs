@@ -4,6 +4,7 @@ using LiveScore.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LiveScore.Migrations
 {
     [DbContext(typeof(LiveScoreContext))]
-    partial class LiveScoreContextModelSnapshot : ModelSnapshot
+    [Migration("20241121163330_UpdatedUserFieldsByAddingPasswordAgain")]
+    partial class UpdatedUserFieldsByAddingPasswordAgain
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

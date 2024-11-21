@@ -1,0 +1,36 @@
+﻿@page "/substitutions"
+@inject IHttpClientFactory HttpClientFactory
+
+<h3>Substitutions</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Player In</th>
+            <th>Player Out</th>
+            <th>Quarter</th>
+            <th>Time</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var substitution in SubstitutionList)
+        {
+            <tr>
+                <td>@substitution.PlayerIn.Name</td>
+                <td>@substitution.PlayerOut.Name</td>
+                <td>@substitution.Quarter.Number</td>
+                <td>@substitution.Time</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Substitution> SubstitutionList = new List<Substitution>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+        SubstitutionList = await client.GetFromJsonAsync<List<Substitution>>("api/substitutions");
+    }
+}

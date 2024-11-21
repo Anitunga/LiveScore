@@ -1,0 +1,53 @@
+﻿@page "/register"
+@inject NavigationManager NavigationManager
+@inject IHttpClientFactory HttpClientFactory
+
+<h3>Register</h3>
+
+<EditForm Model="NewUser" OnValidSubmit="HandleRegister">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Username:</label>
+        <InputText @bind-Value="NewUser.Username" />
+    </div>
+    <div>
+        <label>Password:</label>
+        <InputText @bind-Value="NewUser.Password" InputType="password" />
+    </div>
+    <div>
+        <label>Role:</label>
+        <InputSelect @bind-Value="NewUser.Role">
+            <option value="Admin">Admin</option>
+            <option value="Encoder">Encoder</option>
+            <option value="Viewer">Viewer</option>
+        </InputSelect>
+    </div>
+    <button type="submit">Register</button>
+</EditForm>
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <p style="color: red">@ErrorMessage</p>
+}
+
+@code {
+    private User NewUser = new User();
+    private string ErrorMessage = string.Empty;
+
+    private async Task HandleRegister()
+    {
+        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+        var response = await client.PostAsJsonAsync("api/users", NewUser);
+
+        if (response.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/login");
+        }
+        else
+        {
+            ErrorMessage = "Failed to register user.";
+        }
+    }
+}
