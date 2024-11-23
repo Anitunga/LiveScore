@@ -2,47 +2,64 @@
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
 
-<h3>Edit Match: @MatchId</h3>
+<PageTitle>Edit Match</PageTitle>
 
-<EditForm Model="MatchToEdit" OnValidSubmit="HandleEditMatch">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+<div class="container mt-5">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white text-center">
+            <h3>Edit Match: @MatchId</h3>
+        </div>
+        <div class="card-body">
+            <EditForm Model="MatchToEdit" OnValidSubmit="HandleEditMatch">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
 
-    <div>
-        <label>Team A:</label>
-        <InputSelect @bind-Value="MatchToEdit.TeamAId">
-            <option value="">Select Team A</option>
-            @foreach (var team in Teams)
-            {
-                <option value="@team.TeamId">@team.Name</option>
-            }
-        </InputSelect>
-    </div>
-    <div>
-        <label>Team B:</label>
-        <InputSelect @bind-Value="MatchToEdit.TeamBId">
-            <option value="">Select Team B</option>
-            @foreach (var team in Teams)
-            {
-                <option value="@team.TeamId">@team.Name</option>
-            }
-        </InputSelect>
-    </div>
-    <div>
-        <label>Total Quarters:</label>
-        <InputNumber @bind-Value="MatchToEdit.TotalQuarters" />
-    </div>
-    <div>
-        <label>Quarter Duration:</label>
-        <InputNumber @bind-Value="MatchToEdit.QuarterDuration" />
-    </div>
-    <div>
-        <label>Timeout Duration:</label>
-        <InputNumber @bind-Value="MatchToEdit.TimeoutDuration" />
-    </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="teamA" class="form-label">Team A:</label>
+                        <InputSelect id="teamA" class="form-select" @bind-Value="MatchToEdit.TeamAId">
+                            <option value="">Select Team A</option>
+                            @foreach (var team in Teams)
+                            {
+                                <option value="@team.TeamId">@team.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="teamB" class="form-label">Team B:</label>
+                        <InputSelect id="teamB" class="form-select" @bind-Value="MatchToEdit.TeamBId">
+                            <option value="">Select Team B</option>
+                            @foreach (var team in Teams)
+                            {
+                                <option value="@team.TeamId">@team.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+                </div>
 
-    <button type="submit">Save Changes</button>
-</EditForm>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="totalQuarters" class="form-label">Total Quarters:</label>
+                        <InputNumber id="totalQuarters" class="form-control" @bind-Value="MatchToEdit.TotalQuarters" />
+                    </div>
+                    <div class="col-md-4">
+                        <label for="quarterDuration" class="form-label">Quarter Duration (seconds):</label>
+                        <InputNumber id="quarterDuration" class="form-control" @bind-Value="MatchToEdit.QuarterDuration" />
+                    </div>
+                    <div class="col-md-4">
+                        <label for="timeoutDuration" class="form-label">Timeout Duration (seconds):</label>
+                        <InputNumber id="timeoutDuration" class="form-control" @bind-Value="MatchToEdit.TimeoutDuration" />
+                    </div>
+                </div>
+
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg me-2">Save Changes</button>
+                    <button type="button" class="btn btn-secondary btn-lg" @onclick="Cancel">Cancel</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
 
 @code {
     [Parameter] public int MatchId { get; set; }
@@ -51,35 +68,46 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
-        // Fetch teams to populate dropdowns
-        Teams = await client.GetFromJsonAsync<List<Team>>("api/teams");
-
-        // Fetch match details by MatchId
-        var match = await client.GetFromJsonAsync<Match>($"api/match/{MatchId}");
-
-        if (match != null)
+        try
         {
-            MatchToEdit = match;
+            var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+
+            // Fetch teams for dropdown
+            Teams = await client.GetFromJsonAsync<List<Team>>("api/teams");
+
+            // Fetch match details
+            MatchToEdit = await client.GetFromJsonAsync<Match>($"api/match/{MatchId}");
         }
-        else
+        catch (Exception ex)
         {
-            Console.WriteLine("Error: Match not found");
+            Console.WriteLine($"Error loading data: {ex.Message}");
         }
     }
 
     private async Task HandleEditMatch()
     {
-        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
-        var response = await client.PutAsJsonAsync($"api/match/{MatchId}", MatchToEdit);
+        try
+        {
+            var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+            var response = await client.PutAsJsonAsync($"api/match/{MatchId}", MatchToEdit);
 
-        if (response.IsSuccessStatusCode)
-        {
-            NavigationManager.NavigateTo("/matches");  // Redirect to the matches list page after successful edit
+            if (response.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo("/matches");
+            }
+            else
+            {
+                Console.WriteLine("Failed to update match.");
+            }
         }
-        else
+        catch (Exception ex)
         {
-            Console.WriteLine("Error updating match");
+            Console.WriteLine($"Error saving changes: {ex.Message}");
         }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/matches");
     }
 }
