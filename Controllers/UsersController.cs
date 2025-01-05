@@ -1,8 +1,12 @@
 ﻿using LiveScore.Data;
 using LiveScore.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -20,6 +24,7 @@ namespace LiveScore.Controllers
         }
 
         // GET: api/Users
+        //[Authorize]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<User>>> GetUsers()
         {
@@ -42,7 +47,7 @@ namespace LiveScore.Controllers
 
         // POST: api/Users/Register
         [HttpPost("Register")]
-        public async Task<IActionResult> Register(User user)
+        public async Task<IActionResult> Register([FromBody] User user)
         {
             if (_context.Users.Any(u => u.Username == user.Username))
             {
@@ -71,13 +76,43 @@ namespace LiveScore.Controllers
             }
 
             // Here you would typically generate a JWT token
-            return Ok(new { message = "Login successful", userId = user.UserId });
+            // Generate a JWT token
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.UTF8.GetBytes("aRandomJwtString1234567890DOTNET"); // Use same key as in appsettings.json
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim(ClaimTypes.Name, user.UserId.ToString()),
+                    new Claim(ClaimTypes.Role, user.Role) // Add user roles
+                }),
+                Expires = DateTime.UtcNow.AddHours(1), // Token expiry
+                Issuer = "https://localhost:7113", //token sender 
+                Audience = "https://localhost:7113", //token receiver
+                
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+
+            return Ok(new
+            {
+                message = "Login successful",
+                token = tokenHandler.WriteToken(token)
+            });
         }
 
         // PUT: api/Users/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateUser(int id, User user)
+        public async Task<IActionResult> UpdateUser(int id, [FromBody] User user)
         {
+
+            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            if (currentUserRole != "Admin")
+            {
+                return Forbid(); // 403 Forbidden
+            }
+
             if (id != user.UserId)
             {
                 return BadRequest();
@@ -110,23 +145,35 @@ namespace LiveScore.Controllers
                 throw;
             }
 
-            return NoContent();
+            return NoContent(); //204 Status No content Response
         }
 
         // DELETE: api/Users/5
+        [Authorize]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
-            var user = await _context.Users.FindAsync(id);
-            if (user == null)
+            // Get the role of the authenticated user from the token
+            var authenticatedUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            // Ensure the authenticated user has permission
+            if (authenticatedUserRole == "Admin")
             {
-                return NotFound();
+                var user = await _context.Users.FindAsync(id);
+                if (user == null)
+                {
+                    return NotFound();
+                }
+
+                _context.Users.Remove(user);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "User deleted successfully" });
             }
-
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "User deleted successfully" });
+            else
+            {
+                return Forbid(); // Return 403 Forbidden for unauthorized roles
+            }
         }
 
         private bool UserExists(int id)

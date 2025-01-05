@@ -17,6 +17,7 @@ builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     options.JsonSerializerOptions.WriteIndented = true;
 });
+builder.Services.AddAuthorization();  // Ensure authorization services are added.
 
 // Add services to the container
 builder.Services.AddHttpClient(); // This registers IHttpClientFactory
@@ -29,7 +30,7 @@ builder.Services.AddDbContext<LiveScoreContext>(options =>
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
-    options.TokenValidationParameters = new TokenValidationParameters()
+    options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateActor = true, //idnetify parts
         ValidateAudience = true, // avoid attacks (a website can't use the same token twice)
@@ -48,6 +49,29 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "Basketball LiveScore API",
         Version = "v1"
+    });
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        In = ParameterLocation.Header,
+        Description = "Please enter a valid JWT token",
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        BearerFormat = "JWT",
+        Scheme = "bearer"
+    });
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] { }
+        }
     });
 });
 
@@ -72,12 +96,12 @@ else
 }
 
 //Auth(Respect the Order)
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-app.UseRouting();
 
 app.MapControllers();
 app.MapBlazorHub();
