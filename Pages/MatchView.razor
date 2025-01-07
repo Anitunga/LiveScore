@@ -1,0 +1,384 @@
+﻿@page "/match/{matchId:int}"
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+@using LiveScore.Models
+
+<PageTitle>Match Details</PageTitle>
+
+<div class="container mt-4">
+    @if (Match != null)
+    {
+        <div class="card mb-4 shadow">
+            <div class="card-header bg-primary text-white">
+                <div class="row align-items-center">
+                    <div class="col-md-4 text-center">
+                        <h4>@Match.TeamA.Name</h4>
+                        <div class="badge bg-light text-dark">@GetTotalScore(true) pts</div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <h5 class="mb-0">VS</h5>
+                        <small>@Match.Date.ToString("MMMM dd, yyyy")</small>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <h4>@Match.TeamB.Name</h4>
+                        <div class="badge bg-light text-dark">@GetTotalScore(false) pts</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Rosters -->
+            <div class="card-body">
+                <div class="row">
+                    <!-- Team A Players -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">@Match.TeamA.Name Roster</h5>
+                                <small>Coach ID: @Match.TeamA.CoachId</small>
+                            </div>
+                            <div class="card-body">
+                                @if (PlayerList != null)
+                                {
+                                    var teamAPlayers = PlayerList.Where(p => p.TeamId == Match.TeamAId).ToList();
+                                    if (teamAPlayers.Any())
+                                    {
+                                        <div class="mb-3">
+                                            <h6 class="border-bottom pb-2">Starting Lineup</h6>
+                                            @foreach (var player in teamAPlayers.Where(p => p.IsStartingPlayer))
+                                            {
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <span class="badge bg-secondary me-2">#@player.Number</span>
+                                                    <span class="flex-grow-1">@player.Name</span>
+                                                    <small class="text-muted">@player.Position</small>
+                                                </div>
+                                            }
+                                        </div>
+                                        <div>
+                                            <h6 class="border-bottom pb-2">Bench</h6>
+                                            @foreach (var player in teamAPlayers.Where(p => !p.IsStartingPlayer))
+                                            {
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <span class="badge bg-secondary me-2">#@player.Number</span>
+                                                    <span class="flex-grow-1">@player.Name</span>
+                                                    <small class="text-muted">@player.Position</small>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Team B Players -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-danger text-white">
+                                <h5 class="mb-0">@Match.TeamB.Name Roster</h5>
+                                <small>Coach ID: @Match.TeamB.CoachId</small>
+                            </div>
+                            <div class="card-body">
+                                @if (PlayerList != null)
+                                {
+                                    var teamBPlayers = PlayerList.Where(p => p.TeamId == Match.TeamBId).ToList();
+                                    if (teamBPlayers.Any())
+                                    {
+                                        <div class="mb-3">
+                                            <h6 class="border-bottom pb-2">Starting Lineup</h6>
+                                            @foreach (var player in teamBPlayers.Where(p => p.IsStartingPlayer))
+                                            {
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <span class="badge bg-secondary me-2">#@player.Number</span>
+                                                    <span class="flex-grow-1">@player.Name</span>
+                                                    <small class="text-muted">@player.Position</small>
+                                                    <small class="ms-2 text-info">@GetPlayerStatsSummary(player.PlayerId)</small>
+                                                </div>
+                                            }
+                                        </div>
+                                        <div>
+                                            <h6 class="border-bottom pb-2">Bench</h6>
+                                            @foreach (var player in teamBPlayers.Where(p => !p.IsStartingPlayer))
+                                            {
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <span class="badge bg-secondary me-2">#@player.Number</span>
+                                                    <span class="flex-grow-1">@player.Name</span>
+                                                    <small class="text-muted">@player.Position</small>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Match Info -->
+                <div class="card mt-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">Match Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <div class="border rounded p-3">
+                                    <h6>Total Quarters</h6>
+                                    <span class="h4">@Match.TotalQuarters</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="border rounded p-3">
+                                    <h6>Quarter Duration</h6>
+                                    <span class="h4">@Match.QuarterDuration sec</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="border rounded p-3">
+                                    <h6>Timeout Duration</h6>
+                                    <span class="h4">@Match.TimeoutDuration sec</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (Match.Quarters != null)
+        {
+            <div class="card shadow">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Quarter Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var quarter in Match.Quarters.OrderBy(q => q.Number))
+                        {
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100 shadow-sm">
+                                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">Quarter @quarter.Number</h6>
+                                        <span>@quarter.StartTime.ToString(@"hh\:mm") - @quarter.EndTime.ToString(@"hh\:mm")</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-around mb-3">
+                                            <div class="text-center">
+                                                <h6>@Match.TeamA.Name</h6>
+                                                <span class="h4">@quarter.TeamAScore</span>
+                                            </div>
+                                            <div class="text-center">
+                                                <h6>@Match.TeamB.Name</h6>
+                                                <span class="h4">@quarter.TeamBScore</span>
+                                            </div>
+                                        </div>
+
+                                        @if (quarter.Events != null && quarter.Events.Any())
+                                        {
+                                            <div class="mt-3">
+                                                <h6 class="border-bottom pb-2">Events Timeline</h6>
+                                                <div class="events-timeline">
+                                                    @foreach (var ev in quarter.Events.OrderBy(e => e.Time))
+                                                    {
+                                                        <div class="event-item d-flex align-items-center mb-2 p-2 rounded">
+                                                            <span class="badge bg-dark me-2">@ev.Time.ToString(@"mm\:ss")</span>
+                                                            <div class="flex-grow-1">
+                                                                @if (ev.PlayerInvolved != null)
+                                                                {
+                                                                    <div class="d-flex align-items-center">
+                                                                        <span class="badge bg-secondary me-2">#@ev.PlayerInvolved.Number</span>
+                                                                        <span class="fw-bold">@ev.PlayerInvolved.Name</span>
+                                                                        <small class="text-muted ms-2">(@ev.PlayerInvolved.Position)</small>
+                                                                    </div>
+                                                                }
+                                                                <div class="mt-1">
+                                                                    <span>@GetEventTypeDisplay(ev)</span>
+                                                                    @if (ev.Type == EventType.Score)
+                                                                    {
+                                                                        <span class="badge bg-success ms-2">+@ev.PointsScored</span>
+                                                                    }
+                                                                    @if (ev.Type == EventType.Foul && ev.Foul.HasValue)
+                                                                    {
+                                                                        <span class="badge bg-danger ms-2">@ev.Foul</span>
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="alert alert-warning text-center shadow">
+            <div class="spinner-border text-warning me-2" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <strong>Loading match details...</strong>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int MatchId { get; set; }
+
+    private Match Match;
+    private List<Player> PlayerList;
+    private List<Event> EventList;
+    private List<Foul> FoulList;
+    private List<Substitution> SubstitutionList;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient();
+            client.BaseAddress = new Uri("https://localhost:7113/");
+
+            // Load all data in parallel
+            var matchTask = client.GetFromJsonAsync<Match>($"api/match/{MatchId}");
+            var playersTask = client.GetFromJsonAsync<List<Player>>("api/Player");
+            var eventsTask = client.GetFromJsonAsync<List<Event>>("api/Event");
+            var foulsTask = client.GetFromJsonAsync<List<Foul>>("api/Fouls");
+            var substitutionsTask = client.GetFromJsonAsync<List<Substitution>>("api/Substitution");
+
+            await Task.WhenAll(matchTask, playersTask, eventsTask, foulsTask, substitutionsTask);
+
+            Match = await matchTask;
+            PlayerList = await playersTask;
+            EventList = await eventsTask;
+            FoulList = await foulsTask;
+            SubstitutionList = await substitutionsTask;
+
+            // Enrich events with related data
+            if (EventList != null)
+            {
+                foreach (var evt in EventList)
+                {
+                    // Link player to event
+                    evt.PlayerInvolved = PlayerList?.FirstOrDefault(p => p.PlayerId == evt.PlayerInvolved?.PlayerId);
+
+                    // For fouls, get the foul details
+                    if (evt.Type == EventType.Foul && evt.Foul.HasValue)
+                    {
+                        var foul = FoulList?.FirstOrDefault(f =>
+                            f.Quarter?.QuarterId == evt.QuarterId &&
+                            f.Player?.PlayerId == evt.PlayerInvolved?.PlayerId &&
+                            f.Time == evt.Time);
+
+                        if (foul != null)
+                        {
+                            evt.Foul = foul.FoulType;
+                        }
+                    }
+                }
+            }
+
+            // Populate quarters with events
+            if (Match?.Quarters != null)
+            {
+                foreach (var quarter in Match.Quarters)
+                {
+                    quarter.Events = EventList
+                        ?.Where(e => e.QuarterId == quarter.QuarterId)
+                        .OrderBy(e => e.Time)
+                        .ToList();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+    }
+
+    private string GetEventTypeDisplay(Event ev)
+    {
+        return ev.Type switch
+        {
+            EventType.Score => $"scored {ev.PointsScored} points",
+            EventType.Foul => $"committed a {ev.Foul?.ToString().ToLower()} foul",
+            EventType.Timeout => "called a timeout",
+            EventType.Substitution => GetSubstitutionDisplay(ev),
+            _ => ev.Type.ToString()
+        };
+    }
+
+    private string GetSubstitutionDisplay(Event ev)
+    {
+        var sub = SubstitutionList?.FirstOrDefault(s =>
+            s.Quarter?.QuarterId == ev.QuarterId &&
+            s.Time == ev.Time);
+
+        if (sub != null)
+        {
+            var playerIn = PlayerList?.FirstOrDefault(p => p.PlayerId == sub.PlayerInId);
+            var playerOut = PlayerList?.FirstOrDefault(p => p.PlayerId == sub.PlayerOutId);
+
+            return $"Substitution: {playerIn?.Name} in, {playerOut?.Name} out";
+        }
+
+        return "Substitution";
+    }
+
+    private string GetPlayerStatsSummary(int playerId)
+    {
+        var playerEvents = EventList?
+            .Where(e => e.PlayerInvolved?.PlayerId == playerId)
+            .ToList();
+
+        if (playerEvents == null || !playerEvents.Any())
+            return string.Empty;
+
+        var points = playerEvents.Where(e => e.Type == EventType.Score)
+                               .Sum(e => e.PointsScored);
+
+        var fouls = playerEvents.Count(e => e.Type == EventType.Foul);
+
+        return $"Points: {points} | Fouls: {fouls}";
+    }
+
+    private int GetTotalScore(bool isTeamA)
+    {
+        if (Match?.Quarters == null) return 0;
+        return Match.Quarters.Sum(q => isTeamA ? q.TeamAScore : q.TeamBScore);
+    }
+}
+
+<style>
+    .events-timeline {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .event-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    /* Custom scrollbar for events timeline */
+    .events-timeline::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .events-timeline::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    .events-timeline::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 3px;
+    }
+
+    .events-timeline::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+</style>

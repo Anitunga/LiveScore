@@ -1,4 +1,5 @@
 using LiveScore.Data;
+using LiveScore.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -12,12 +13,27 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSingleton<WeatherForecastService>();
+
+// Register all your services here
+// AddScoped creates a new instance of the service for each HTTP request. 
+// AddSingleton creates a single instance of the service that is shared throughout the entire application. 
+// AddTransient creates a new instance of the service every time it is requested. Are short-lived and are created every time they are needed.
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<TeamService>();
+builder.Services.AddScoped<MatchService>();
+builder.Services.AddScoped<PlayerService>();
+builder.Services.AddScoped<EventService>();
+builder.Services.AddScoped<QuarterService>();
+builder.Services.AddScoped<FoulService>();
+builder.Services.AddScoped<SubstitutionService>();
+builder.Services.AddScoped<CoachService>();
+
+
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     options.JsonSerializerOptions.WriteIndented = true;
 });
-builder.Services.AddAuthorization();  // Ensure authorization services are added.
 
 // Add services to the container
 builder.Services.AddHttpClient(); // This registers IHttpClientFactory
@@ -42,6 +58,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         ClockSkew = TimeSpan.Zero //by default it's 5 min. Represent the authorized time between the client and the server
     };
 });
+
+builder.Services.AddAuthorization();  // Ensure authorization services are added.
 
 builder.Services.AddSwaggerGen(c =>
 {

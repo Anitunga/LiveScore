@@ -16,6 +16,13 @@
     <div class="form-group">
         <label for="coach">Coach:</label>
         <!--<InputText class="form-control" id="coach" @bind-Value="NewTeam.CoachId" />-->
+        <InputSelect class="form-control" @bind-Value="NewTeam.CoachId">
+            <option value="">Select a Coach</option>
+            @foreach (var coach in CoachList)
+            {
+                <option value="@coach.CoachId">@coach.Name</option>
+            }
+        </InputSelect>
     </div>
 
     <button type="submit" class="btn btn-success">Create Team</button>
@@ -28,11 +35,12 @@
 
 @code {
     private Team NewTeam = new Team();
+    private List<Coach> CoachList = new List<Coach>();
     private string ErrorMessage = string.Empty;
 
     private async Task HandleCreateTeam()
     {
-        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+        /*var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
         var response = await client.PostAsJsonAsync("api/teams", NewTeam);
 
         if (response.IsSuccessStatusCode)
@@ -42,6 +50,25 @@
         else
         {
             ErrorMessage = "Failed to create team.";
+        }*/
+
+        try
+        {
+            var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+            var response = await client.PostAsJsonAsync("api/teams", NewTeam);
+
+            if (response.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo("/teams");
+            }
+            else
+            {
+                ErrorMessage = "Failed to create team.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"An error occurred while creating the team: {ex.Message}";
         }
     }
 }

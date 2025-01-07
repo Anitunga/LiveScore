@@ -1,14 +1,8 @@
-﻿using LiveScore.Data;
-using LiveScore.Models;
+﻿using LiveScore.Models;
+using LiveScore.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace LiveScore.Controllers
 {
@@ -16,11 +10,11 @@ namespace LiveScore.Controllers
     [ApiController]
     public class UsersController : ControllerBase
     {
-        private readonly LiveScoreContext _context;
+        private readonly UserService _userService;
 
-        public UsersController(LiveScoreContext context)
+        public UsersController(UserService userService)
         {
-            _context = context;
+            _userService = userService;
         }
 
         // GET: api/Users
@@ -28,37 +22,34 @@ namespace LiveScore.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<User>>> GetUsers()
         {
-            return await _context.Users.ToListAsync();
+            var users = await _userService.GetUsersAsync();
+            return Ok(users);
         }
 
         // GET: api/Users/5
+        //[Authorize(Roles = "Admin, Encoder")]
         [HttpGet("{id}")]
         public async Task<ActionResult<User>> GetUser(int id)
         {
-            var user = await _context.Users.FindAsync(id);
+            var user = await _userService.GetUserByIdAsync(id);
 
             if (user == null)
             {
                 return NotFound();
             }
 
-            return user;
+            return Ok(user);
         }
 
         // POST: api/Users/Register
         [HttpPost("Register")]
         public async Task<IActionResult> Register([FromBody] User user)
         {
-            if (_context.Users.Any(u => u.Username == user.Username))
+            var success = await _userService.RegisterUserAsync(user);
+            if (!success)
             {
                 return BadRequest(new { error = "Username already exists" });
             }
-
-            // Hash the password before saving
-            user.Password = HashPassword(user.Password);
-            
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
 
             return Ok(new { message = "User registered successfully" });
         }
@@ -67,133 +58,49 @@ namespace LiveScore.Controllers
         [HttpPost("Login")]
         public async Task<IActionResult> Login(LoginRequest request)
         {
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Username == request.Username);
-
-            if (user == null || !VerifyPassword(request.Password, user.Password))
+            var token = await _userService.AuthenticateUserAsync(request.Username, request.Password);
+            if (token == null)
             {
                 return Unauthorized(new { error = "Invalid username or password" });
             }
 
-            // Here you would typically generate a JWT token
-            // Generate a JWT token
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes("aRandomJwtString1234567890DOTNET"); // Use same key as in appsettings.json
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[]
-                {
-                    new Claim(ClaimTypes.Name, user.UserId.ToString()),
-                    new Claim(ClaimTypes.Role, user.Role) // Add user roles
-                }),
-                Expires = DateTime.UtcNow.AddHours(1), // Token expiry
-                Issuer = "https://localhost:7113", //token sender 
-                Audience = "https://localhost:7113", //token receiver
-                
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
-
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-
             return Ok(new
             {
                 message = "Login successful",
-                token = tokenHandler.WriteToken(token)
+                token
             });
         }
 
         // PUT: api/Users/5
         [HttpPut("{id}")]
+        //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateUser(int id, [FromBody] User user)
         {
+            //var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            var result = await _userService.UpdateUserAsync(id, user);
 
-            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
-            if (currentUserRole != "Admin")
+            if (!result)
             {
-                return Forbid(); // 403 Forbidden
+                return Forbid(); // 403 Forbidden or NotFound
             }
 
-            if (id != user.UserId)
-            {
-                return BadRequest();
-            }
-
-            var existingUser = await _context.Users.FindAsync(id);
-            if (existingUser == null)
-            {
-                return NotFound();
-            }
-
-            // Only update specific fields
-            existingUser.Username = user.Username;
-            if (!string.IsNullOrEmpty(user.Password))
-            {
-                existingUser.Password = HashPassword(user.Password);
-            }
-            existingUser.Role = user.Role;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!UserExists(id))
-                {
-                    return NotFound();
-                }
-                throw;
-            }
-
-            return NoContent(); //204 Status No content Response
+            return Ok(new { message = "User updated successfully" });
         }
 
         // DELETE: api/Users/5
-        [Authorize]
         [HttpDelete("{id}")]
+        //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteUser(int id)
         {
-            // Get the role of the authenticated user from the token
-            var authenticatedUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            //var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            var result = await _userService.DeleteUserAsync(id);
 
-            // Ensure the authenticated user has permission
-            if (authenticatedUserRole == "Admin")
+            if (!result)
             {
-                var user = await _context.Users.FindAsync(id);
-                if (user == null)
-                {
-                    return NotFound();
-                }
-
-                _context.Users.Remove(user);
-                await _context.SaveChangesAsync();
-
-                return Ok(new { message = "User deleted successfully" });
+                return Forbid(); // 403 Forbidden or NotFound
             }
-            else
-            {
-                return Forbid(); // Return 403 Forbidden for unauthorized roles
-            }
-        }
 
-        private bool UserExists(int id)
-        {
-            return _context.Users.Any(e => e.UserId == id);
-        }
-
-        private string HashPassword(string password)
-        {
-            using (var sha256 = SHA256.Create())
-            {
-                var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-                return Convert.ToBase64String(hashedBytes);
-            }
-        }
-
-        private bool VerifyPassword(string password, string hashedPassword)
-        {
-            var hashedInput = HashPassword(password);
-            return hashedInput == hashedPassword;
+            return Ok(new { message = "User deleted successfully" });
         }
     }
 

@@ -1,5 +1,7 @@
 ﻿using LiveScore.Data;
 using LiveScore.Models;
+using LiveScore.Pages;
+using LiveScore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,51 +12,40 @@ namespace LiveScore.Controllers
     [ApiController]
     public class MatchController : ControllerBase
     {
-        private readonly LiveScoreContext _context;
+        private readonly MatchService _matchService;
 
-        public MatchController(LiveScoreContext context)
+        public MatchController(MatchService matchService)
         {
-            _context = context;
+            _matchService = matchService;
         }
 
         // GET: api/Match
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Match>>> GetMatches()
         {
-            return await _context.Matches
-                .Include(m => m.TeamA)
-                .Include(m => m.TeamB)
-                .Include(m => m.Quarters)
-                .Include(m => m.User)
-                .ToListAsync();
+            var matches = await _matchService.GetAllMatchesAsync();
+            return Ok(matches);
+
         }
 
         // GET: api/Match/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<Match>> GetMatch(int id)
         {
-            var match = await _context.Matches
-                .Include(m => m.TeamA)
-                .Include(m => m.TeamB)
-                .Include(m => m.Quarters)
-                .Include(m => m.User)
-                .FirstOrDefaultAsync(m => m.MatchId == id);
-
+            var match = await _matchService.GetMatchByIdAsync(id);
             if (match == null)
             {
                 return NotFound();
             }
 
-            return match;
+            return Ok(match);
         }
 
         // POST: api/Match
         [HttpPost]
         public async Task<IActionResult> AddMatch(Match match)
         {
-            _context.Matches.Add(match);
-            await _context.SaveChangesAsync();
-
+            var createdMatch = await _matchService.AddMatchAsync(match);
             return Ok(new
             {
                 Message = "Match created successfully",
@@ -71,22 +62,13 @@ namespace LiveScore.Controllers
                 return BadRequest(new { Message = "Match ID mismatch" });
             }
 
-            _context.Entry(match).State = EntityState.Modified;
-
             try
             {
-                await _context.SaveChangesAsync();
+                await _matchService.UpdateMatchAsync(match);
             }
-            catch (DbUpdateConcurrencyException)
+            catch (KeyNotFoundException)
             {
-                if (!MatchExists(id))
-                {
-                    return NotFound(new { Message = "Match not found" });
-                }
-                else
-                {
-                    throw;
-                }
+                return NotFound(new { Message = "Match not found" });
             }
 
             return Ok(new { Message = "Match updated successfully" });
@@ -96,21 +78,16 @@ namespace LiveScore.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteMatch(int id)
         {
-            var match = await _context.Matches.FindAsync(id);
-            if (match == null)
+            try
+            {
+                await _matchService.DeleteMatchAsync(id);
+            }
+            catch (KeyNotFoundException)
             {
                 return NotFound(new { Message = "Match not found" });
             }
 
-            _context.Matches.Remove(match);
-            await _context.SaveChangesAsync();
-
             return Ok(new { Message = "Match deleted successfully" });
-        }
-
-        private bool MatchExists(int id)
-        {
-            return _context.Matches.Any(m => m.MatchId == id);
         }
     }
 }

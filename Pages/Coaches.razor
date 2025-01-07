@@ -1,0 +1,69 @@
+﻿@page "/coaches"
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+
+<h3>Coaches</h3>
+
+<div class="table-responsive">
+    <table class="table table-bordered table-striped">
+        <thead class="thead-dark">
+            <tr>
+                <th>Name</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (CoachList.Any())
+            {
+                @foreach (var coach in CoachList)
+                {
+                    <tr>
+                        <td>@coach.Name</td>
+                        <td>
+                            <button class="btn btn-warning" @onclick="() => EditCoach(coach.CoachId)">Edit</button>
+                            <button class="btn btn-danger" @onclick="() => DeleteCoach(coach.CoachId)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="4" class="text-center">No coaches available</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<button class="btn btn-success" @onclick="CreateNewCoach">Create New Coach</button>
+
+@code {
+    private List<Coach> CoachList = new List<Coach>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+        CoachList = await client.GetFromJsonAsync<List<Coach>>("api/coaches");
+    }
+
+    private void CreateNewCoach()
+    {
+        NavigationManager.NavigateTo("/coaches/create");
+    }
+
+    private void EditCoach(int coachId)
+    {
+        NavigationManager.NavigateTo($"/coaches/edit/{coachId}");
+    }
+
+    private async Task DeleteCoach(int coachId)
+    {
+        var response = await HttpClient.DeleteAsync($"api/coaches/{coachId}");
+        if (response.IsSuccessStatusCode)
+        {
+            CoachList = await HttpClient.GetFromJsonAsync<List<Coach>>("api/coaches"); // Refresh list
+        }
+    }
+}
+

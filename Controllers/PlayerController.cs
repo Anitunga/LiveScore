@@ -1,8 +1,9 @@
 ﻿using LiveScore.Data;
 using LiveScore.Models;
-using Microsoft.AspNetCore.Http;
+using LiveScore.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace LiveScore.Controllers
 {
@@ -11,97 +12,80 @@ namespace LiveScore.Controllers
     public class PlayerController : ControllerBase
     {
         private readonly LiveScoreContext _context;
+        private readonly PlayerService _playerService;
 
-        public PlayerController(LiveScoreContext context)
+        public PlayerController(PlayerService playerService)
         {
-            _context = context;
+            _playerService = playerService;
         }
 
         // GET: api/Player
         [HttpGet]
+        // [Authorize(Roles = "Viewer,Encoder,Admin")]
         public async Task<ActionResult<IEnumerable<Player>>> GetPlayers()
         {
-            var players = await _context.Players
-                .Include(p => p.Team)
-                .ToListAsync();
-
-            return players;
+            var players = await _playerService.GetPlayersAsync();
+            return Ok(players);
         }
 
         // GET: api/Player/{id}
         [HttpGet("{id}")]
+        //[Authorize(Roles = "Viewer,Encoder,Admin")]
         public async Task<ActionResult<Player>> GetPlayer(int id)
         {
-            var player = await _context.Players.Include(p => p.Team).FirstOrDefaultAsync(p => p.PlayerId == id);
+            var player = await _playerService.GetPlayerByIdAsync(id);
 
             if (player == null)
             {
                 return NotFound();
             }
 
-            return player;
+            return Ok(player);
         }
 
         // POST: api/Player
         [HttpPost]
-        public async Task<ActionResult<Player>> AddPlayer(Player player)
+        //[Authorize(Roles = "Admin")]
+        public async Task<ActionResult<Player>> AddPlayer([FromBody] Player player)
         {
-            _context.Players.Add(player);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetPlayer), new { id = player.PlayerId }, player);
-            //return player;
+            var createdPlayer = await _playerService.AddPlayerAsync(player);
+            return CreatedAtAction(nameof(GetPlayer), new { id = createdPlayer.PlayerId }, new
+            {
+                Message = "Player created successfully",
+                Player = createdPlayer
+            });
         }
 
         // PUT: api/Player/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> EditPlayer(int id, Player player)
+        //[Authorize(Roles = "Admin,Encoder")]
+        public async Task<IActionResult> EditPlayer(int id, [FromBody] Player player)
         {
-            if (id != player.PlayerId)
+            //var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            var result = await _playerService.UpdatePlayerAsync(id, player);
+
+            if (!result)
             {
-                return BadRequest();
+                return Forbid(); // 403 Forbidden if unauthorized or not found
             }
 
-            _context.Entry(player).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!PlayerExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
+            return Ok(new { message = "Player updated successfully" });
         }
 
         // DELETE: api/Player/{id}
         [HttpDelete("{id}")]
+        //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeletePlayer(int id)
         {
-            var player = await _context.Players.FindAsync(id);
-            if (player == null)
+            //var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            var result = await _playerService.DeletePlayerAsync(id);
+
+            if (!result)
             {
-                return NotFound();
+                return Forbid(); // 403 Forbidden if unauthorized or not found
             }
 
-            _context.Players.Remove(player);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-
-        private bool PlayerExists(int id)
-        {
-            return _context.Players.Any(p => p.PlayerId == id);
+            return Ok(new { message = "Player deleted successfully" });
         }
     }
 }

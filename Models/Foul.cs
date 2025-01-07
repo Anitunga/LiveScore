@@ -14,5 +14,4 @@
         public TimeSpan Time { get; set; }
     }
 
-
 }

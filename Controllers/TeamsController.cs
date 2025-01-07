@@ -1,5 +1,6 @@
 ﻿using LiveScore.Data;
 using LiveScore.Models;
+using LiveScore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,39 +11,42 @@ namespace LiveScore.Controllers
     [ApiController]
     public class TeamsController : ControllerBase
     {
-        private readonly LiveScoreContext _context;
+        private readonly TeamService _teamService;
 
-        public TeamsController(LiveScoreContext context)
+        public TeamsController(TeamService teamService)
         {
-            _context = context;
+            _teamService = teamService;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Team>>> GetTeams()
         {
-            return await _context.Teams.Include(t => t.Coach).ToListAsync();
+            var teams = await _teamService.GetAllTeamsAsync();
+            return Ok(teams);
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Team>> GetTeam(int id)
         {
-            var team = await _context.Teams.Include(t => t.Coach).FirstOrDefaultAsync(t => t.TeamId == id);
-
+            var team = await _teamService.GetTeamByIdAsync(id);
             if (team == null)
             {
                 return NotFound();
             }
 
-            return team;
+            return Ok(team);
+
         }
 
         [HttpPost]
         public async Task<ActionResult<Team>> CreateTeam(Team team)
         {
-            _context.Teams.Add(team);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetTeam), new { id = team.TeamId }, team);
+            var createdTeam = await _teamService.CreateTeamAsync(team);
+            return CreatedAtAction(nameof(GetTeam), new { id = createdTeam.TeamId }, new
+            {
+                Message = "Team created successfully",
+                Team = createdTeam
+            });
         }
 
         [HttpPut("{id}")]
@@ -53,45 +57,31 @@ namespace LiveScore.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(team).State = EntityState.Modified;
-
             try
             {
-                await _context.SaveChangesAsync();
+                await _teamService.UpdateTeamAsync(team);
             }
-            catch (DbUpdateConcurrencyException)
+            catch (KeyNotFoundException)
             {
-                if (!TeamExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return NotFound();
             }
 
-            return NoContent();
+            return Ok(new { message = "Team updated successfully" });
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTeam(int id)
         {
-            var team = await _context.Teams.FindAsync(id);
-            if (team == null)
+            try
+            {
+                await _teamService.DeleteTeamAsync(id);
+            }
+            catch (KeyNotFoundException)
             {
                 return NotFound();
             }
 
-            _context.Teams.Remove(team);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-
-        private bool TeamExists(int id)
-        {
-            return _context.Teams.Any(e => e.TeamId == id);
+            return Ok(new { message = "Team deleted successfully" });
         }
     }
 }

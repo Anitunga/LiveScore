@@ -57,6 +57,7 @@
     private void ViewMatch(int matchId)
     {
         // Redirect to match details page (optional)
-        NavigationManager.NavigateTo($"/matches");
+        //NavigationManager.NavigateTo($"/matches");
+        NavigationManager.NavigateTo($"/match/{matchId}");
     }
 }

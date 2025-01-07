@@ -1,7 +1,6 @@
 ﻿@page "/players"
 @inject HttpClient HttpClient
 @inject NavigationManager NavigationManager
-@inject IJSRuntime JSRuntime
 
 <h3>Player List</h3>
 
@@ -16,7 +15,7 @@
         </tr>
     </thead>
     <tbody>
-        @if (Players != null && Players.Any())
+        @if (Players.Any())
         {
             @foreach (var player in Players)
             {
@@ -44,19 +43,12 @@
 <button class="btn btn-success" @onclick="CreatePlayer">Add New Player</button>
 
 @code {
-    private List<Player> Players = new();
+    private List<Player> Players = new List<Player>();
 
     protected override async Task OnInitializedAsync()
     {
-        try
-        {
-            var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
-            Players = await client.GetFromJsonAsync<List<Player>>("api/player");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error fetching players: {ex.Message}");
-        }
+        var client = new HttpClient { BaseAddress = new Uri("https://localhost:7113/") };
+        Players = await client.GetFromJsonAsync<List<Player>>("api/Player");
     }
 
     private void CreatePlayer()
@@ -66,28 +58,15 @@
 
     private void EditPlayer(int playerId)
     {
-        NavigationManager.NavigateTo($"/players/edit/{playerId}");
+        NavigationManager.NavigateTo($"/players/edit/{playerId}"); 
     }
 
     private async Task DeletePlayer(int playerId)
     {
-        // Show confirmation dialog before deleting
-        bool isConfirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete player ID {playerId}?");
-
-        if (isConfirmed)
+        var response = await HttpClient.DeleteAsync($"api/players/{playerId}"); //Call the API to delete the player
+        if (response.IsSuccessStatusCode)
         {
-            try
-            {
-                // Call the API to delete the player
-                await HttpClient.DeleteAsync($"api/player/{playerId}");
-                // Refresh the player list after deletion
-                Players = await HttpClient.GetFromJsonAsync<List<Player>>("api/player");
-            }
-            catch (Exception ex)
-            {
-                // Handle the error (e.g., display a message)
-                Console.WriteLine($"Error deleting player: {ex.Message}");
-            }
+            Players = await HttpClient.GetFromJsonAsync<List<Player>>("api/players"); // Refresh list
         }
     }
 }
